@@ -183,7 +183,12 @@ function (lang,   logger,   envOptimize,        file,           parse,
 
             fileContents = optimize.js(fileName, fileContents, config, pluginCollector);
 
-            file.saveUtf8File(outFileName, fileContents);
+            if (typeof fileContents == "string") {
+                file.saveUtf8File(outFileName, fileContents);
+            } else if (typeof fileContents == "object" && "sourceMap" in fileContents) {
+                file.saveUtf8File(outFileName, fileContents.fileContents);
+                file.saveUtf8File(fileContents.sourceMapFileName, fileContents.sourceMap);
+            }
         },
 
         /**
@@ -227,9 +232,15 @@ function (lang,   logger,   envOptimize,        file,           parse,
                         logger.error('Cannot parse file: ' + fileName + ' for comments. Skipping it. Error is:\n' + e.toString());
                     }
                 }
-
-                fileContents = licenseContents + optFunc(fileName, fileContents, keepLines,
+                fileContents = optFunc(fileName, fileContents, keepLines,
                                         config[optimizerName]);
+                if (typeof fileContents == "string") {
+                    fileContents = licenseContents + fileContents;
+                } else {
+                    var comment = '//@ sourceMappingURL=' + fileContents.sourceMapFileName.split("/").slice(-1)[0] + '';
+                    fileContents.fileContents = licenseContents + fileContents.fileContents;
+                    fileContents.fileContents = fileContents.fileContents + "\n" + comment;
+                }
             }
 
             return fileContents;

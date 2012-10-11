@@ -60,7 +60,7 @@ define(['logger'], function (logger) {
                 //Fake extern
                 externSourceFile = closurefromCode("fakeextern.js", " "),
                 //Set up source input
-                jsSourceFile = closurefromCode(String(fileName), String(fileContents)),
+                jsSourceFile = closurefromCode(String(fileName.split("/").slice(-1)[0]), String(fileContents)),
                 options, option, FLAG_compilation_level, compiler,
                 Compiler = Packages.com.google.javascript.jscomp.Compiler,
                 result;
@@ -78,6 +78,13 @@ define(['logger'], function (logger) {
             }
             options.prettyPrint = keepLines || options.prettyPrint;
 
+            // Source maps
+            if ("CreateSourceMap" in config) {
+                options.sourceMapOutputPath  = config.CreateSourceMap;
+                options.sourceMapDetailLevel = jscomp.SourceMap$DetailLevel[config.SourceMapDetailLevel || 'SYMBOLS'];
+                options.sourceMapFormat      = jscomp.SourceMap$Format[config.SourceMapFormat || 'V2'];
+            }
+
             FLAG_compilation_level = jscomp.CompilationLevel[config.CompilationLevel || 'SIMPLE_OPTIMIZATIONS'];
             FLAG_compilation_level.setOptionsForCompilationLevel(options);
 
@@ -92,7 +99,12 @@ define(['logger'], function (logger) {
                 fileContents = compiler.toSource();
             }
 
-            return fileContents;
+            var sb = Packages.java.lang.StringBuilder();
+            var sourceMapFileName = options.sourceMapOutputPath.replace("%outname%", fileName);
+            result.sourceMap.appendTo(sb, fileName.split("/").slice(-1)[0]);
+            var sourceMap = sb.toString();
+
+            return {fileContents: fileContents, sourceMap: sourceMap, sourceMapFileName: sourceMapFileName};
         }
     };
 
